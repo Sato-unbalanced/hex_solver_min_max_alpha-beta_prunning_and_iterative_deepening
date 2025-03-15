@@ -6,7 +6,7 @@ If you decide to use Pygame or a diffeent thing for the GUI it might be more wor
 
 For creating alpha beta prunning. You would need to call the evaluator for every possible move. I created a basic evaluator which we can fine tune,
 but how it works iss by getting segements. To use the evaluator it would require you to most likely copy hex_states or do something else. 
-If the function has to be change to have hex_states as parameter instead of using self to make easier let me know.
+If the all_reachable function has to be change to have hex_states as parameter instead of using self to make easier let me know. Could also leave as is but add then revert back the tested move.
 
 For iterative deeping I would recommend it being time based such as keep going as long as time < 10 seconds for example. We would need to create
 a new function for each number of moves ahead or allow that to be taken as an input in the same function.

@@ -23,7 +23,7 @@ class Hex_Game:
 		self.create_board()
 
 	def _print_all_possible_moves(self):
-		print("The played moves are: " + str(self.move_options))
+		print("The possible moves are: " + str(self.move_options))
 
 	def _print_played_moves(self):
 		print("The played moves are: " + str(self.played_moves))
@@ -216,7 +216,7 @@ class Hex_Game:
 
 		self.print_board()
 		#print(move)
-		print(self.move_options)
+		self._print_all_possible_moves()
 		self.move_options.remove(move)
 		self.played_moves.add(move)
 

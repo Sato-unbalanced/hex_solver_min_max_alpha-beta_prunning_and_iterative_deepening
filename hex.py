@@ -202,6 +202,7 @@ class Hex_Game:
 
 	def random_move(self):
 		move = random.choice(self.move_options)
+		#print("The move:", move)
 		return move
 		
 
@@ -214,60 +215,42 @@ class Hex_Game:
 			self.hex_states[move_y][move_x] = colored("⬢", "red")
 
 		self.print_board()
+		#print(move)
+		print(self.move_options)
 		self.move_options.remove(move)
 		self.played_moves.add(move)
 
+	def game(self, p1_move_func, p2_move_func):
+		self.current_round = 0
+		self.played_moves = set()
+		self.winner_exists = False
+
+		while self.winner_exists == False:
+			self.current_player = "P1"
+			move = p1_move_func()
+			self.player_move(move)
+			self.determine_if_winner(move)
+		
+			if self.winner_exists:
+				self._print_winner()
+				break
+
+			self.current_player = "P2"
+			move = p2_move_func()
+			self.player_move(move)
+			self.determine_if_winner(move)
+
+			if self.winner_exists:
+				self._print_winner()
+				break
+			self.current_round += 1
+			
 	def play_game(self):
 		#player one wins if line left to right and player two if line top to bottom
-		self.current_round = 0
-		self.played_moves = set()
-		self.winner_exists = False
-
-		while self.winner_exists == False:
-			self.current_player = "P1"
-			move = self.get_move()
-			self.player_move(move)
-			self.determine_if_winner(move)
-		
-			if self.winner_exists:
-				self._print_winner()
-				break
-
-			self.current_player = "P1"
-			move = self.get_move()
-			self.player_move(move)
-			self.determine_if_winner(move)
-
-			if self.winner_exists:
-				self._print_winner()
-				break
-			self.current_round += 1
+		self.game(self.get_move, self.get_move)		
 
 	def simulation(self):
-		self.current_round = 0
-		self.played_moves = set()
-		self.winner_exists = False
-
-		while self.winner_exists == False:
-			self.current_player = "P1"
-			move = self.random_move()
-			self.player_move(move)
-			self.determine_if_winner(move)
-		
-			if self.winner_exists:
-				self._print_winner()
-				break
-
-			self.current_player = "P1"
-			move = self.random_move()
-			self.player_move(move)
-			self.determine_if_winner(move)
-
-			if self.winner_exists:
-				self._print_winner()
-				break
-			self.current_round += 1
-
+		self.game(self.random_move, self.random_move)	
 
 if __name__ == "__main__":
 	hex = Hex_Game(5)

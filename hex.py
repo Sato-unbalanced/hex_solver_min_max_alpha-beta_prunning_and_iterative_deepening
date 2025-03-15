@@ -1,5 +1,6 @@
 from termcolor import colored
 import random
+import copy
 ALPHABET = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P",
 		"Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"]
 
@@ -72,7 +73,7 @@ class Hex_Game:
 
 	def check_placement(self, move):
 		who_placed  = self.check_who_placed(move)
-		if who_placed == self.current_player:
+		if who_placed == self.who_placed_first_move_in_sequence:
 			return True
 		return False
 
@@ -142,8 +143,11 @@ class Hex_Game:
 	def determine_if_winner(self, most_recent_move):
 		#most recent move as ("A", 1) x,y
 		all_reachable = set()
+
+		self.who_placed_first_move_in_sequence = self.check_who_placed(most_recent_move)
+
 		self.add_to_reachable(most_recent_move, all_reachable)
-		print(all_reachable)
+		#print(all_reachable)
 	
 		if self.current_player == "P1":
 			x_coords = []
@@ -151,7 +155,8 @@ class Hex_Game:
 				x_coords.append(value[0])
 			unique_x_coords = set(x_coords)
 			print(unique_x_coords)
-			if "A" in unique_x_coords and ALPHABET[self.board_size-1] in unique_x_coords:
+			#if "A" in unique_x_coords and ALPHABET[self.board_size-1] in unique_x_coords:
+			if len(unique_x_coords) == self.board_size:
 				self.winner_exists = True
 		
 		
@@ -161,7 +166,8 @@ class Hex_Game:
 				y_coords.append(value[1])
 			unique_y_coords = set(y_coords)
 			print(unique_y_coords)
-			if "1" in unique_y_coords and str(self.board_size) in unique_y_coords:
+			#if "1" in unique_y_coords and str(self.board_size) in unique_y_coords:
+			if len(unique_y_coords) == self.board_size:
 				self.winner_exists = True
 		
 
@@ -177,7 +183,8 @@ class Hex_Game:
 				board += value_2
 			board += colored(str(key), "blue")
 			board += "\n"
-			spacer += " "
+			if int(key) != 9:
+				spacer += " "
 		board += spacer + header
 		print(board)
 	
@@ -216,7 +223,7 @@ class Hex_Game:
 
 		self.print_board()
 		#print(move)
-		self._print_all_possible_moves()
+		#self._print_all_possible_moves()
 		self.move_options.remove(move)
 		self.played_moves.add(move)
 
@@ -229,6 +236,7 @@ class Hex_Game:
 			self.current_player = "P1"
 			move = p1_move_func()
 			self.player_move(move)
+			self.evaluate()
 			self.determine_if_winner(move)
 		
 			if self.winner_exists:
@@ -238,6 +246,7 @@ class Hex_Game:
 			self.current_player = "P2"
 			move = p2_move_func()
 			self.player_move(move)
+			self.evaluate()
 			self.determine_if_winner(move)
 
 			if self.winner_exists:
@@ -251,6 +260,56 @@ class Hex_Game:
 
 	def simulation(self):
 		self.game(self.random_move, self.random_move)	
+
+	def get_segments(self):
+		played_moves = copy.deepcopy(self.played_moves)
+		#key is initial move of segment
+		segments = {}
+		for move in self.played_moves:
+			if move in played_moves:
+				all_reachable = copy.deepcopy(set())
+				self.who_placed_first_move_in_sequence = self.check_who_placed(move)
+				self.add_to_reachable(move, all_reachable)
+				for reachable_move in all_reachable:
+					played_moves.remove(reachable_move)
+
+				segments[move] = copy.deepcopy(all_reachable)
+		return segments
+
+	def get_player_segment_lengths(self, segments):
+		player_segments_lengths = {"P1": {}, "P2": {}}
+		for key in segments.keys():
+			player = self.check_who_placed(key)
+			if player == "P1":
+				x_coords = []
+				for value in segments[key]:
+					x_coords.append(value[0])
+				unique_x_coords = set(x_coords)
+				player_segments_lengths["P1"][key] = len(unique_x_coords)
+				
+			elif player == "P2":
+				y_coords = []
+				for value in segments[key]:
+					y_coords.append(value[1])
+				unique_y_coords = set(y_coords)
+				player_segments_lengths["P2"][key] = len(unique_y_coords)
+		return player_segments_lengths
+		
+
+	def evaluate_lengths(self, player_segments_lengths):
+		player_totals = {"P1":0, "P2":0}
+		for key in player_segments_lengths.keys():
+			for value in player_segments_lengths[key].values():
+				player_totals[key] += value * value
+		print("Totals: ", player_totals)
+		return player_totals
+
+	def evaluate(self):
+		segments = self.get_segments()
+		player_segments_lengths  = self.get_player_segment_lengths(segments)
+		totals = self.evaluate_lengths(player_segments_lengths)
+		return totals
+
 
 if __name__ == "__main__":
 	hex = Hex_Game(5)

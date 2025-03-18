@@ -248,7 +248,7 @@ class Hex_Game:
 		move_func = p1_move_func
 
 		while self.winner_exists == False:
-			self.player_actions(p1_move_func)
+			self.player_actions(move_func)
 		
 			if self.winner_exists:
 				self._print_winner()

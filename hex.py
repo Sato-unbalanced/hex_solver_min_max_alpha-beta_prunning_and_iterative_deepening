@@ -211,7 +211,6 @@ class Hex_Game:
 		move = random.choice(self.move_options)
 		#print("The move:", move)
 		return move
-		
 
 	def player_move(self, move):
 		move_x = move[0]
@@ -227,31 +226,38 @@ class Hex_Game:
 		self.move_options.remove(move)
 		self.played_moves.add(move)
 
+
+	def swap_current_player(self):
+		if self.current_player == "P2":
+			self.current_player = "P1"
+		else:
+			self.current_player = "P2"
+
+	def player_actions(self, move_func):
+		self.swap_current_player()
+		move = move_func()
+		self.player_move(move)
+		self.evaluate()
+		self.determine_if_winner(move)
+
 	def game(self, p1_move_func, p2_move_func):
 		self.current_round = 0
 		self.played_moves = set()
 		self.winner_exists = False
+		self.current_player = "P1"
 
 		while self.winner_exists == False:
-			self.current_player = "P1"
-			move = p1_move_func()
-			self.player_move(move)
-			self.evaluate()
-			self.determine_if_winner(move)
+			self.player_actions(p1_move_func)
 		
 			if self.winner_exists:
 				self._print_winner()
-				break
+				return self.current_player
 
-			self.current_player = "P2"
-			move = p2_move_func()
-			self.player_move(move)
-			self.evaluate()
-			self.determine_if_winner(move)
+			self.player_actions(p2_move_func)
 
 			if self.winner_exists:
 				self._print_winner()
-				break
+				return self.current_player
 			self.current_round += 1
 			
 	def play_game(self):

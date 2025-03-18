@@ -234,11 +234,11 @@ class Hex_Game:
 			self.current_player = "P2"
 
 	def player_actions(self, move_func):
-		self.swap_current_player()
 		move = move_func()
 		self.player_move(move)
 		self.evaluate()
 		self.determine_if_winner(move)
+		self.swap_current_player()
 
 
 	def swap_move_func(self, move_func, p1_move_func, p2_move_func):

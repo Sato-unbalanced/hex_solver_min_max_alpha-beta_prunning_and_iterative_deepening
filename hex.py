@@ -240,6 +240,14 @@ class Hex_Game:
 		self.evaluate()
 		self.determine_if_winner(move)
 
+
+	def swap_move_func(self, move_func, p1_move_func, p2_move_func):
+		if move_func == p2_move_func:
+			move_func = p1_move_func
+		else:
+			move_func = p2_move_func
+		return move_func
+
 	def game(self, p1_move_func, p2_move_func):
 		self.current_round = 0
 		self.played_moves = set()
@@ -254,10 +262,7 @@ class Hex_Game:
 				self._print_winner()
 				return self.current_player
 
-			if move_func == p2_move_func:
-				move_func = p1_move_func
-			else:
-				move_func = p2_move_func
+			move_func = self.swap_move_func(move_func, p1_move_func, p2_move_func)
 			self.current_round += 0.5
 			
 	def play_game(self):

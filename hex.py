@@ -245,6 +245,7 @@ class Hex_Game:
 		self.played_moves = set()
 		self.winner_exists = False
 		self.current_player = "P1"
+		move_func = p1_move_func
 
 		while self.winner_exists == False:
 			self.player_actions(p1_move_func)
@@ -253,12 +254,11 @@ class Hex_Game:
 				self._print_winner()
 				return self.current_player
 
-			self.player_actions(p2_move_func)
-
-			if self.winner_exists:
-				self._print_winner()
-				return self.current_player
-			self.current_round += 1
+			if move_func == p2_move_func:
+				move_func = p1_move_func
+			else:
+				move_func = p2_move_func
+			self.current_round += 0.5
 			
 	def play_game(self):
 		#player one wins if line left to right and player two if line top to bottom

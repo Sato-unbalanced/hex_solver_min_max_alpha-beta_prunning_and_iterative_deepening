@@ -1,6 +1,9 @@
 from termcolor import colored
 import random
 import copy
+import tkinter as tk
+from functools import partial
+import math
 ALPHABET = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P",
 		"Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"]
 
@@ -221,7 +224,7 @@ class Hex_Game:
 			self.hex_states[move_y][move_x] = colored("⬢", "red")
 
 		self.print_board()
-		#print(move)
+		#print("Move:", move)
 		#self._print_all_possible_moves()
 		self.move_options.remove(move)
 		self.played_moves.add(move)
@@ -235,11 +238,19 @@ class Hex_Game:
 
 	def player_actions(self, move_func):
 		move = move_func()
+		print(move)
+		#move = str(move[0]) + str(move[1])
+		#print(move)
+		self.do_actions(move)
+
+	def do_actions(self, move):
+		#print(move)
+		#move = (move[0],move[1])
 		self.player_move(move)
 		self.evaluate()
 		self.determine_if_winner(move)
-		self.swap_current_player()
-
+		if self.winner_exists == False:
+			self.swap_current_player()
 
 	def swap_move_func(self, move_func, p1_move_func, p2_move_func):
 		if move_func == p2_move_func:
@@ -260,6 +271,7 @@ class Hex_Game:
 		
 			if self.winner_exists:
 				self._print_winner()
+				self.reset_board()
 				return self.current_player
 
 			move_func = self.swap_move_func(move_func, p1_move_func, p2_move_func)
@@ -321,9 +333,253 @@ class Hex_Game:
 		totals = self.evaluate_lengths(player_segments_lengths)
 		return totals
 
+class Hex_Game_UI(Hex_Game):
+
+
+	def on_enter(self, item, event=None):
+		if self.current_player == "P1":
+			color = "lightblue"
+		elif self.current_player == "P2":
+			color = "lightcoral"
+		self.canvas.itemconfigure(item, fill=color)
+
+	def on_leave(self, item, event=None):
+    		self.canvas.itemconfigure(item, fill="white")
+
+	def player_move_ui(self, id):
+		#overwrites text based version
+    		move = (id[0], id[1])
+    		print(move)
+    		return move
+
+	def player_vs_player(self, id):
+		if self.winner_exists == False:
+    			move = self.player_move_ui(id)
+    			self.do_actions(move)
+    			self.current_round += 0.5
+		if self.winner_exists:
+    			self._print_winner()
+    			#self.canvas.destroy()
+    			self.root.quit()
+    			return self.current_player
+
+	def player_vs_ai(self, id):
+		if self.type == 2:
+			move_func = self.p2_move_func
+		elif self.type == 3:
+			move_func = self.p1_move_func
+
+		if self.winner_exists == False:
+    			move = self.player_move_ui(id)
+    			self.do_actions(move)
+    			self.current_round += 0.5
+    			move = move_func()
+    			print(move)
+    			str_move = str(move[0]) + str(move[1])
+    			self.modify_hexagon(self.hexagons[str_move])
+    			self.do_actions(move)
+    			self.current_round += 0.5
+		if self.winner_exists:
+    			self._print_winner()
+    			#self.canvas.destroy()
+    			self.root.quit()
+    			return self.current_player
+
+
+	def time_limit_reached(self):
+    		print("Time limit reached!")
+    		self.root.quit()
+
+	def ai_vs_ai(self):
+		move_func = self.p1_move_func
+		while True:
+			if self.winner_exists == False:
+    				move = move_func()
+    				print(move)
+    				str_move = str(move[0]) + str(move[1])
+    				self.modify_hexagon(self.hexagons[str_move])
+    				self.do_actions(move)
+    				self.current_round += 0.5
+    				move_func = self.swap_move_func(move_func, self.p1_move_func, self.p2_move_func)
+
+			if self.winner_exists:
+    				self._print_winner()
+				# Schedule the time_limit_reached function to be called after 10000 milliseconds (10 seconds)
+    				self.root.after(10000, self.time_limit_reached)
+    				tk.mainloop()
+    				#self.canvas.destroy()
+    				return self.current_player
+
+	def clicked(self, item, id, event=None):
+		self.modify_hexagon(item)
+		if self.type == 1:
+    			self.player_vs_player(id)
+		elif self.type == 2 or self.type==3:
+			self.player_vs_ai(id)
+
+	def create_hexagon(self, fill="white", outline="black", text="text"):
+		points = []
+		for i in range(6):
+			angle_rad = math.radians(60 * i)
+			x = self.hex_x + self.hex_size * math.cos(angle_rad)
+			y = self.hex_y + self.hex_size * math.sin(angle_rad)
+			#swap y and x for hexagon with line on top keep for point on top
+			points.append(y)
+			points.append(x)
+		hexagon = self.canvas.create_polygon(points, fill=fill, outline=outline)
+		self.canvas.tag_bind(hexagon, "<Enter>", partial(self.on_enter, hexagon))
+		self.canvas.tag_bind(hexagon, "<Leave>", partial(self.on_leave, hexagon))
+
+		#what clicked does will differ based on type
+
+		self.canvas.tag_bind(hexagon,"<Button-1>",partial(self.clicked, hexagon, text))
+		return hexagon
+
+	def create_hexagon_text(self, text, text_color="black", fill="white", outline="black"):
+		hexagon = self.create_hexagon(fill, outline, text)
+		text_id = self.create_text(text, text_color)
+		return hexagon
+
+	def create_text(self, text, text_color="black"):
+		text_id = self.canvas.create_text(self.hex_y, self.hex_x, text=text, font=("Arial", self.text_size, "bold"), fill=text_color, anchor="center")
+
+	def modify_hexagon(self, item):
+		if self.current_player == "P1":
+			color = "blue"
+		elif self.current_player == "P2":
+			color = "red"
+		self.canvas.itemconfigure(item, fill=color)
+		self.canvas.tag_unbind(item, "<Button-1>")
+		self.canvas.tag_unbind(item, "<Enter>")
+		self.canvas.tag_unbind(item, "<Leave>")
+
+	def generate_ui(self):
+
+		self.root = tk.Tk()
+		self.canvas =tk.Canvas(self.root, width= 1000 ,height= 1000, bg = 'white')
+		self.canvas.pack()
+
+		self.ui_text_color = "black"
+		self.hex_size = 400/self.board_size
+		self.text_size = int(self.hex_size/2)
+		print(self.hex_size)
+		self.hex_x = self.hex_size * 2
+		self.hex_y = self.hex_size * 2
+		self.hexagons = {}
+		shifter = self.hex_y
+
+
+		for y in range(self.board_size):
+			y_coord = str(y+1)
+			for x in range(self.board_size):
+				x_coord = ALPHABET[x]
+				text = x_coord + y_coord
+				hexagon = self.create_hexagon_text(text=text)
+				self.hexagons[text] = hexagon
+				self.hex_y += self.hex_size*6.9/4
+			self.hex_x += self.hex_size*6/4
+			shifter += self.hex_size*6.9/8
+			self.hex_y = shifter
+		
+		#add numbers and letters
+		self.hex_x = self.hex_size * 2
+		self.hex_y = self.hex_size
+		for y in range(self.board_size):
+			y_coord = str(y+1)
+			self.create_text(y_coord, "blue")
+			self.hex_x += self.hex_size*6/4
+			self.hex_y += self.hex_size*6.4/8
+		self.hex_y = self.hex_size + self.hex_size*6.2/4*(self.board_size+1)
+		self.hex_x = self.hex_size * 2
+		for y in range(self.board_size):
+			y_coord = str(y+1)
+			self.create_text(y_coord, "blue")
+			self.hex_x += self.hex_size*6/4
+			self.hex_y += self.hex_size*6.4/8
+
+		self.hex_x = self.hex_size/2
+		self.hex_y = self.hex_size*2
+		for x in range(self.board_size):
+			x_coord = ALPHABET[x]
+			self.create_text(x_coord, "red")
+			self.hex_y += self.hex_size*1.75
+
+		self.hex_x = self.hex_size/2 + self.hex_size*6/4*(self.board_size+1)
+		self.hex_y = self.hex_size + self.hex_size/2.2 + self.hex_size*6.4/8*(self.board_size)
+		for x in range(self.board_size):
+			x_coord = ALPHABET[x]
+			self.create_text(x_coord, "red")
+			self.hex_y += self.hex_size*1.75
+
+		self.update_canvas_size()
+
+
+		if self.type == 3:
+    			move = self.p1_move_func()
+    			print(move)
+    			str_move = str(move[0]) + str(move[1])
+    			self.modify_hexagon(self.hexagons[str_move])
+    			self.do_actions(move)
+    			self.current_round += 0.5
+		elif self.type == 4:
+			self.ai_vs_ai()
+			return
+
+		tk.mainloop()
+		#self.canvas.pack_forget()
+
+	def update_canvas_size(self):
+		self.canvas.update_idletasks()
+		bbox = self.canvas.bbox("all")
+		if bbox:
+			self.canvas.config(width=bbox[2] - bbox[0] + self.hex_size * 2, height=bbox[3] - bbox[1] + self.hex_size*2)
+
+	def ui_game(self, type=1, p1_move_func=None, p2_move_func=None):
+		#four options for type, 1: player vs player, 2: player vs ai, 3: ai vs player, 4: ai vs ai
+		#only need to pass move function for types 2,3, or 4.
+		self.current_round = 0
+		self.played_moves = set()
+		self.winner_exists = False
+		self.current_player = "P1"
+		self.type = type
+		#makes more sense to make self instead of passing like in text-based since works differently
+		self.p1_move_func = p1_move_func
+		self.p2_move_func = p2_move_func
+		self.generate_ui()
+		self.reset_board()
+
+	def play_game(self):
+		#player one wins if line left to right and player two if line top to bottom
+		self.ui_game()	
+
+	def as_p1(self):
+		self.ui_game(2, self.random_move, self.random_move)	
+
+	def as_p2(self):
+		self.ui_game(3, self.random_move, self.random_move)
+
+	def simulation(self):
+		self.ui_game(4, self.random_move, self.random_move)	
+
+	def reset_board(self):
+		self.create_board()
+		#self.canvas.destroy()
+		self.root.destroy()
+
 
 if __name__ == "__main__":
-	hex = Hex_Game(5)
-	hex.simulation()
-	hex.reset_board()
+	#hex = Hex_Game(5)
+	#hex.simulation()
+	hex = Hex_Game_UI(5)
 	hex.play_game()
+	#hex.reset_board()
+	#hex.play_game()
+	hex.as_p1()
+	hex.as_p2()
+	hex.simulation()
+	#hex.ui_game(type=1, p1_move_func=hex.random_move, p2_move_func=hex.random_move)
+	#hex.reset_board()
+	#hex.ui_game_ai()
+	#hex.simulation()
+	#hex.reset_board()
+	#hex.play_game()

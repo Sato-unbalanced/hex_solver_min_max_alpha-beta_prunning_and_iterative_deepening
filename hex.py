@@ -199,14 +199,14 @@ class Hex_Game:
 		if "," in move:
 			move = tuple(move.split(","))
 		else:
-			move = (move[0], move[1])
+			move = (move[0], move[1:])
 		move = (move[0].upper(), move[1])
 		while move not in self.move_options:
 			move = input("Pick a new move: ")
 			if "," in move:
 				move = tuple(move.split(","))
 			else:
-				move = (move[0], move[1])
+				move = (move[0], move[1:])
 			move = (move[0].upper(), move[1])
 		return move
 
@@ -348,7 +348,7 @@ class Hex_Game_UI(Hex_Game):
 
 	def player_move_ui(self, id):
 		#overwrites text based version
-    		move = (id[0], id[1])
+    		move = (id[0], id[1:])
     		print(move)
     		return move
 

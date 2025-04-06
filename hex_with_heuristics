@@ -15,32 +15,32 @@ class Hex_Game:
         def create_board(self):
                 self.hex_states = {}
                 self.move_options = []
-                P1_b_heuristic = 7
+                P1_b_hex_value = 7
                 board_middle = self.board_size//2
                 for y in range(self.board_size):
                         y_coord = str(y+1)
                         self.hex_states[y_coord] = {}
-                        P2_r_heuristic = 7
+                        P2_r_hex_value = 7
                         for x in range(self.board_size):
                                 x_coord = ALPHABET[x]
                                 if x == (board_middle) and y == (board_middle):
                                     h1 = 10
                                     h2 = 10
                                 else:
-                                    h1 = P1_b_heuristic
-                                    h2 = P2_r_heuristic
+                                    h1 = P1_b_hex_value
+                                    h2 = P2_r_hex_value
                                 
                                 self.hex_states[y_coord][x_coord] = ["⬡", h1, h2]
                                 self.move_options.append((x_coord,y_coord))
                                 if x >= (board_middle):
-                                    P2_r_heuristic -=1
+                                    P2_r_hex_value -=1
                                 else:
-                                    P2_r_heuristic +=1
+                                    P2_r_hex_value +=1
                             
                         if y >= (board_middle):
-                            P1_b_heuristic -=1
+                            P1_b_hex_value -=1
                         else:
-                            P1_b_heuristic +=1
+                            P1_b_hex_value +=1
                         #print(self.hex_states)
 
 
@@ -270,10 +270,10 @@ class Hex_Game:
         
         #sorts moves for minimax so its less work to see the max or min moves that can benefit them
         def sort_moves(self, possible_moves, is_max_agent):
-               return sorted(possible_moves, key=lambda move: self.move_heuristic(move, is_max_agent), reverse=is_max_agent)
+               return sorted(possible_moves, key=lambda move: self.move_value(move, is_max_agent), reverse=is_max_agent)
 
-        #checks hueristic value of a move 
-        def move_heuristic(self, move, is_max_agent):
+        #checks value of a move 
+        def move_value(self, move, is_max_agent):
                move_y = move[1]
                move_x = move[0]
                p1_h = 1
@@ -289,16 +289,15 @@ class Hex_Game:
                 #print("The move:", move)
                 return move
         
-
         def update_h_if_empty(self, move_y, move_x, player):
                if self.hex_states[move_y][move_x][0] == "⬡":
                       if player == "P1":
-                             self.hex_states[move_y][move_x][1] += 5 #addes to heuristic value 5 seems to be pretty good we can test with different values to see which does best
+                             self.hex_states[move_y][move_x][1] += 6 #addes to hex value 5 seems to be pretty good we can test with different values to see which does best
                              
                       else:
-                             self.hex_states[move_y][move_x][2] += 5
+                             self.hex_states[move_y][move_x][2] += 6
 
-        def p1_update_h(self, move):
+        def p1_update_h_value(self, move):
             left_hex = chr(ord(move[0])-1)
             right_hex = chr(ord(move[0])+1)
             lower_y = str(int(move[1])+1)
@@ -324,7 +323,7 @@ class Hex_Game:
                 self.update_h_if_empty(move[1], right_hex, "P1")
 
 
-        def p2_update_h(self, move):
+        def p2_update_h_value(self, move):
             top_y = str(int(move[1])-1)
             lower_y =  str(int(move[1])+1)
             left_hex = chr(ord(move[0])-1)
@@ -357,12 +356,12 @@ class Hex_Game:
                 move_y = move[1]
                 if self.current_player == "P1":
                         self.hex_states[move_y][move_x][0] = colored("⬢", "blue")
-                        self.p1_update_h(move)
+                        self.p1_update_h_value(move)
                         #print(self.hex_states)
 
                 elif self.current_player == "P2":
                         self.hex_states[move_y][move_x][0] = colored("⬢", "red")
-                        self.p2_update_h(move)
+                        self.p2_update_h_value(move)
                        # print(self.hex_states)
                         
                 self.print_board()
@@ -495,7 +494,7 @@ class Hex_Game:
                         for value in player_segments_lengths[key].values():
                                 player_totals[key] += value * 1    #adds to value based on segment length
 
-                                #also add heuristic values
+                                #also add hex values
                         for segment_start in player_segments_lengths[key].keys():
                                for move in segments[segment_start]:
                                       
@@ -506,8 +505,8 @@ class Hex_Game:
                                                         h = 1
                                                 else:
                                                         h = 2
-                                                heuristic = self.hex_states[move_y][move_x][h]
-                                                player_totals[key] += heuristic * 1  # addes to value based on heuristic value of position
+                                                hex_value = self.hex_states[move_y][move_x][h]
+                                                player_totals[key] += hex_value * 1  # addes to value based on hex value of position
                 
                 #print("Totals: ", player_totals)
                 return player_totals
@@ -533,7 +532,7 @@ class Hex_Game:
                max_score = -100000
                best_move = None
                possible_moves = self.get_possible_moves() 
-               #sorts moves with high heuristics to min heuristics 
+               #sorts moves with high values to min values 
                sorted_moves = self.sort_moves(possible_moves, is_max_agent=True)
 
                for move in sorted_moves:
@@ -554,7 +553,7 @@ class Hex_Game:
                min_score = 100000
                best_move = None
                possible_moves = self.get_possible_moves() 
-               #sorts moves with min heuristics to high heuristics 
+               #sorts moves with min values to high values 
                sorted_moves = self.sort_moves(possible_moves, is_max_agent=False)
                
                for move in sorted_moves:

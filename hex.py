@@ -3,6 +3,7 @@ import random
 import copy
 import tkinter as tk
 from functools import partial
+from hex_solver import ai_move
 import math
 ALPHABET = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P",
 		"Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"]
@@ -344,76 +345,79 @@ class Hex_Game_UI(Hex_Game):
 		self.canvas.itemconfigure(item, fill=color)
 
 	def on_leave(self, item, event=None):
-    		self.canvas.itemconfigure(item, fill="white")
+		self.canvas.itemconfigure(item, fill="white")
 
 	def player_move_ui(self, id):
 		#overwrites text based version
-    		move = (id[0], id[1:])
-    		print(move)
-    		return move
+		move = (id[0], id[1:])
+		print(move)
+		return move
 
 	def player_vs_player(self, id):
 		if self.winner_exists == False:
-    			move = self.player_move_ui(id)
-    			self.do_actions(move)
-    			self.current_round += 0.5
+			move = self.player_move_ui(id)
+			self.do_actions(move)
+			self.current_round += 0.5
 		if self.winner_exists:
-    			self._print_winner()
-    			#self.canvas.destroy()
-    			self.root.quit()
-    			return self.current_player
+			self._print_winner()
+			#self.canvas.destroy()
+			self.root.quit()
+			return self.current_player
 
 	def player_vs_ai(self, id):
 		if self.type == 2:
-			move_func = self.p2_move_func
+			move_func = self.p1_move_func
+
 		elif self.type == 3:
 			move_func = self.p1_move_func
 
 		if self.winner_exists == False:
-    			move = self.player_move_ui(id)
-    			self.do_actions(move)
-    			self.current_round += 0.5
-    			move = move_func()
-    			print(move)
-    			str_move = str(move[0]) + str(move[1])
-    			self.modify_hexagon(self.hexagons[str_move])
-    			self.do_actions(move)
-    			self.current_round += 0.5
+			move = self.player_move_ui(id)
+			self.do_actions(move)
+			self.current_round += 0.5
+			if (self.type == 2 and self.current_round == 0.5):
+				self.ai_move_generator = ai_move(move,self.hex_states)
+			move = next(self.ai_move_generator)
+			print(move)
+			str_move = str(move[0]) + str(move[1])
+			self.modify_hexagon(self.hexagons[str_move])
+			self.do_actions(move)
+			self.current_round += 0.5
 		if self.winner_exists:
-    			self._print_winner()
-    			#self.canvas.destroy()
-    			self.root.quit()
-    			return self.current_player
+			self._print_winner()
+			#self.canvas.destroy()
+			self.root.quit()
+			return self.current_player
 
 
 	def time_limit_reached(self):
-    		print("Time limit reached!")
-    		self.root.quit()
+		print("Time limit reached!")
+		self.root.quit()
 
 	def ai_vs_ai(self):
 		move_func = self.p1_move_func
 		while True:
 			if self.winner_exists == False:
-    				move = move_func()
-    				print(move)
-    				str_move = str(move[0]) + str(move[1])
-    				self.modify_hexagon(self.hexagons[str_move])
-    				self.do_actions(move)
-    				self.current_round += 0.5
-    				move_func = self.swap_move_func(move_func, self.p1_move_func, self.p2_move_func)
+				move = move_func()
+				print(move)
+				str_move = str(move[0]) + str(move[1])
+				self.modify_hexagon(self.hexagons[str_move])
+				self.do_actions(move)
+				self.current_round += 0.5
+				move_func = self.swap_move_func(move_func, self.p1_move_func, self.p2_move_func)
 
 			if self.winner_exists:
-    				self._print_winner()
-				# Schedule the time_limit_reached function to be called after 10000 milliseconds (10 seconds)
-    				self.root.after(10000, self.time_limit_reached)
-    				tk.mainloop()
-    				#self.canvas.destroy()
-    				return self.current_player
+				self._print_winner()
+			# Schedule the time_limit_reached function to be called after 10000 milliseconds (10 seconds)
+				self.root.after(10000, self.time_limit_reached)
+				tk.mainloop()
+				#self.canvas.destroy()
+				return self.current_player
 
 	def clicked(self, item, id, event=None):
 		self.modify_hexagon(item)
 		if self.type == 1:
-    			self.player_vs_player(id)
+			self.player_vs_player(id)
 		elif self.type == 2 or self.type==3:
 			self.player_vs_ai(id)
 
@@ -515,12 +519,12 @@ class Hex_Game_UI(Hex_Game):
 
 
 		if self.type == 3:
-    			move = self.p1_move_func()
-    			print(move)
-    			str_move = str(move[0]) + str(move[1])
-    			self.modify_hexagon(self.hexagons[str_move])
-    			self.do_actions(move)
-    			self.current_round += 0.5
+			move = self.p1_move_func()
+			print(move)
+			str_move = str(move[0]) + str(move[1])
+			self.modify_hexagon(self.hexagons[str_move])
+			self.do_actions(move)
+			self.current_round += 0.5
 		elif self.type == 4:
 			self.ai_vs_ai()
 			return
@@ -571,12 +575,12 @@ if __name__ == "__main__":
 	#hex = Hex_Game(5)
 	#hex.simulation()
 	hex = Hex_Game_UI(5)
-	hex.play_game()
+	#hex.play_game()
 	#hex.reset_board()
 	#hex.play_game()
 	hex.as_p1()
-	hex.as_p2()
-	hex.simulation()
+	#hex.as_p2()
+	#hex.simulation()
 	#hex.ui_game(type=1, p1_move_func=hex.random_move, p2_move_func=hex.random_move)
 	#hex.reset_board()
 	#hex.ui_game_ai()

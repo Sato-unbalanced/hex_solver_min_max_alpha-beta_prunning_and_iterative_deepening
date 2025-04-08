@@ -4,6 +4,9 @@ import copy
 import tkinter as tk
 from functools import partial
 import math
+from fractions import Fraction
+import time
+
 ALPHABET = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P",
 		"Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"]
 
@@ -215,6 +218,239 @@ class Hex_Game:
 		#print("The move:", move)
 		return move
 
+
+
+	def abp_start(self, depth):
+		self.original_player = self.current_player
+		alpha = -math.inf
+		beta = math.inf
+		if depth > len(self.move_options):
+			print("depth to big, setting to max")
+			depth = len(self.move_options)
+		v = -math.inf
+		best_move = None
+		middle = (1 + self.board_size)/2
+		for move in copy.deepcopy(self.move_options):
+			#print("First move:", move)
+			score = self.abp(depth-1, alpha, beta, move)
+
+			#adds distance value closest to center is best only for actual move
+			#make less than one so doesn't affect other factors
+			x_value = self.index_x(move[0])+1
+			y_value = int(move[1])
+			#print(x_value, y_value)
+			x_distance = abs(x_value - middle)
+			y_distance = abs(y_value - middle)
+			#print(x_distance, y_distance)
+			if x_distance != 0:
+				x_distance = Fraction(x_distance)
+				x_distance = x_distance.denominator/x_distance.numerator
+				x_distance = x_distance/100
+			else:
+				x_distance = self.board_size/100
+			if y_distance != 0:
+				y_distance = Fraction(y_distance)
+				y_distance = y_distance.denominator/y_distance.numerator
+				y_distance = y_distance/100
+			else:
+				y_distance = self.board_size/100
+			#print(x_distance, y_distance)
+			#score += (x_distance + y_distance)
+			if self.original_player == "P1":
+				score += y_distance
+			elif self.original_player == "P2":
+				score += x_distance
+			#print(score)
+			#print(move)
+			#if move == ("D", "1"):
+				#print("Score:", score)
+				#print(v)
+			if score > v:
+				#print("Better move:", move)
+				#print(v)
+				#print(score)
+				v = score
+				best_move = move
+			alpha = max(alpha, v)
+		#print(v)
+		return best_move
+				
+
+	def abp(self, depth, alpha, beta, current_move):
+		if depth == 0:
+			self.player_move(current_move)
+			totals = self.evaluate()
+			if self.original_player == "P1":
+				score = totals["P1"] - totals["P2"]
+			elif self.original_player == "P2":
+				score = totals["P2"] - totals["P1"]
+			self.undo_move(current_move)
+			#print(current_move)
+			return score
+		elif (depth % 2) == 1:
+			self.player_move(current_move)
+			self.swap_current_player()
+			v = -math.inf
+			#print(self.move_options)
+			for move in copy.deepcopy(self.move_options):
+				#print("Max move:", move)
+				score = self.abp(depth-1, alpha, beta, move)
+				v = max(v, score)
+				if v >= beta:
+					self.undo_move(current_move)
+					self.swap_current_player()
+					return v
+				alpha = max(alpha, v)
+			self.undo_move(current_move)
+			self.swap_current_player()
+		elif (depth % 2) == 0:
+			self.player_move(current_move)
+			self.swap_current_player()
+			v = math.inf
+			for move in copy.deepcopy(self.move_options):
+				#print("Min move:", move)
+				score = self.abp(depth-1, alpha, beta, move)
+				v = min(v, score)
+				if v <= alpha:
+					self.undo_move(current_move)
+					self.swap_current_player()
+					return v
+				beta = min(beta, v)
+			self.undo_move(current_move)
+			self.swap_current_player()
+		return v
+
+	def abp_id(self, seconds):
+		limit = time.time() + seconds
+		depth = 1
+		while True:
+			move = self.abp_start(depth)
+			print(depth)
+			print(move)
+			print(limit - time.time())
+			if time.time() > limit:
+				return move
+			depth += 1
+
+	def ai_one_ahead(self):
+		current_best_1 = ["A1",-100]
+		for move_1 in self.move_options:
+			self.player_move(move_1)
+			totals = self.evaluate()
+			score = totals["P2"] - totals["P1"]
+			if score > current_best_1[1]:
+				current_best_1[0] = move_1
+				current_best_1[1] = score
+			self.undo_move(move_1)
+		print(current_best_1)
+		return current_best_1[0]
+
+
+
+	def ai_three_ahead_p1(self):
+		current_best_1 = ["A1",-100]
+		current_best_2 = ["A1",100]
+		current_best_3 = ["A1",-100]
+		for move_1 in self.move_options:
+			self.player_move(move_1)
+			self.swap_current_player()
+			for move_2 in self.move_options:
+				self.player_move(move_2)
+				self.swap_current_player()
+				for move_3 in self.move_options:
+					#print(self.current_player)
+					self.player_move(move_3)
+					totals = self.evaluate()
+					score = totals["P1"] - (totals["P2"])
+					if score > current_best_3[1]:
+						current_best_3[0] = move_3
+						current_best_3[1] = score
+						#pruning
+						if current_best_3[1] > current_best_2[1] and current_best_2[1] != 100:
+							self.undo_move(move_3)
+							break
+					self.undo_move(move_3)
+				
+				if current_best_3[1] < current_best_2[1]:
+					current_best_2[0] = move_2
+					current_best_2[1] =  current_best_3[1]
+					#pruning
+					if current_best_2[1] < current_best_1[1] and current_best_2[1] != -100:
+							self.undo_move(move_2)
+							self.swap_current_player()
+							break
+				#reset
+				current_best_3 = ["A1",-100]
+				self.undo_move(move_2)
+				self.swap_current_player()
+			#adds distance + abs(self.index_x(move_1[0])-self.board_size/2) + abs(int(move_1[1])-1-self.board_size/2))
+			if current_best_2[1] >= current_best_1[1]:
+				current_best_1[0] = move_1
+				current_best_1[1] =  current_best_2[1]
+			#reset
+			current_best_2 = ["A1",100]
+			self.undo_move(move_1)
+			self.swap_current_player()
+		print(current_best_1)
+		print(current_best_2)
+		print(current_best_3)
+		return current_best_1[0]
+
+	def ai_three_ahead(self):
+		current_best_1 = ["A1",-100]
+		current_best_2 = ["A1",100]
+		current_best_3 = ["A1",-100]
+		for move_1 in self.move_options:
+			self.player_move(move_1)
+			self.swap_current_player()
+			for move_2 in self.move_options:
+				self.player_move(move_2)
+				self.swap_current_player()
+				for move_3 in self.move_options:
+					#print(self.current_player)
+					self.player_move(move_3)
+					totals = self.evaluate()
+					score = totals["P2"] - (totals["P1"]*2)
+					if score > current_best_3[1]:
+						current_best_3[0] = move_3
+						current_best_3[1] = score
+						#pruning
+						if current_best_3[1] > current_best_2[1] and current_best_2[1] != 100:
+							self.undo_move(move_3)
+							break
+					self.undo_move(move_3)
+				
+				if current_best_3[1] < current_best_2[1]:
+					current_best_2[0] = move_2
+					current_best_2[1] =  current_best_3[1]
+					#pruning
+					if current_best_2[1] < current_best_1[1] and current_best_2[1] != -100:
+							self.undo_move(move_2)
+							self.swap_current_player()
+							break
+				#reset
+				current_best_3 = ["A1",-100]
+				self.undo_move(move_2)
+				self.swap_current_player()
+			if current_best_2[1] > current_best_1[1]:
+				current_best_1[0] = move_1
+				current_best_1[1] =  current_best_2[1]
+			#reset
+			current_best_2 = ["A1",100]
+			self.undo_move(move_1)
+			self.swap_current_player()
+		print(current_best_1)
+		print(current_best_2)
+		print(current_best_3)
+		return current_best_1[0]
+
+	def undo_move(self, move):
+		move_x = move[0]
+		move_y = move[1]
+		self.hex_states[move_y][move_x] = "⬡"
+		self.move_options.append(move)
+		self.played_moves.remove(move)
+
 	def player_move(self, move):
 		move_x = move[0]
 		move_y = move[1]
@@ -223,7 +459,7 @@ class Hex_Game:
 		elif self.current_player == "P2":
 			self.hex_states[move_y][move_x] = colored("⬢", "red")
 
-		self.print_board()
+		#self.print_board()
 		#print("Move:", move)
 		#self._print_all_possible_moves()
 		self.move_options.remove(move)
@@ -247,6 +483,7 @@ class Hex_Game:
 		#print(move)
 		#move = (move[0],move[1])
 		self.player_move(move)
+		self.print_board()
 		self.evaluate()
 		self.determine_if_winner(move)
 		if self.winner_exists == False:
@@ -324,7 +561,7 @@ class Hex_Game:
 		for key in player_segments_lengths.keys():
 			for value in player_segments_lengths[key].values():
 				player_totals[key] += value * value
-		print("Totals: ", player_totals)
+		#print("Totals: ", player_totals)
 		return player_totals
 
 	def evaluate(self):
@@ -553,13 +790,19 @@ class Hex_Game_UI(Hex_Game):
 		self.ui_game()	
 
 	def as_p1(self):
-		self.ui_game(2, self.random_move, self.random_move)	
+		#self.ui_game(2, self.random_move, self.ai_three_ahead)	
+		self.ui_game(2, self.random_move, partial(self.abp_id, 1))	
 
 	def as_p2(self):
-		self.ui_game(3, self.random_move, self.random_move)
+		#self.ui_game(3, self.random_move, self.random_move)
+		#self.ui_game(3, self.ai_three_ahead_p1, self.random_move)
+		self.ui_game(3, partial(self.abp_start, 1), self.random_move, )
 
 	def simulation(self):
-		self.ui_game(4, self.random_move, self.random_move)	
+		#self.ui_game(4, self.random_move, self.ai_three_ahead)	
+		#self.ui_game(4, self.random_move, self.ai_one_ahead)	
+		#self.ui_game(4, self.ai_three_ahead_p1, self.ai_three_ahead)	
+		self.ui_game(4, self.random_move, partial(self.abp_start, 3))	
 
 	def reset_board(self):
 		self.create_board()
@@ -569,14 +812,18 @@ class Hex_Game_UI(Hex_Game):
 
 if __name__ == "__main__":
 	#hex = Hex_Game(5)
+	#hex.game(hex.get_move, hex.ai_three_ahead)	
 	#hex.simulation()
-	hex = Hex_Game_UI(5)
-	hex.play_game()
+	hex = Hex_Game_UI(11)
+	hex.as_p1()
+	#hex.as_p2()
+	#hex.simulation()
+	#hex.play_game()
 	#hex.reset_board()
 	#hex.play_game()
-	hex.as_p1()
-	hex.as_p2()
-	hex.simulation()
+	#hex.as_p1()
+	#hex.as_p2()
+	#hex.simulation()
 	#hex.ui_game(type=1, p1_move_func=hex.random_move, p2_move_func=hex.random_move)
 	#hex.reset_board()
 	#hex.ui_game_ai()

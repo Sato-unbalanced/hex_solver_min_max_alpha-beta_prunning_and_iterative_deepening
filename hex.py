@@ -234,6 +234,7 @@ class Hex_Game:
 			#print("First move:", move)
 			score = self.abp(depth-1, alpha, beta, move)
 
+
 			#adds distance value closest to center is best only for actual move
 			#make less than one so doesn't affect other factors
 			x_value = self.index_x(move[0])+1
@@ -265,6 +266,7 @@ class Hex_Game:
 			#if move == ("D", "1"):
 				#print("Score:", score)
 				#print(v)
+	
 			if score > v:
 				#print("Better move:", move)
 				#print(v)
@@ -324,6 +326,8 @@ class Hex_Game:
 		limit = time.time() + seconds
 		depth = 1
 		while True:
+			if depth > len(self.move_options):
+				return move
 			move = self.abp_start(depth)
 			print(depth)
 			print(move)
@@ -331,6 +335,21 @@ class Hex_Game:
 			if time.time() > limit:
 				return move
 			depth += 1
+
+	def abp_by_size(self):
+		length = len(self.move_options)
+		print(length)
+		if length <= 10:
+			return self.abp_start(6)
+		elif length <= 15:
+			return self.abp_start(4)
+		elif length <= 20:
+			return self.abp_start(3)
+		elif length <= 40:
+			return self.abp_start(2)
+		else:
+			return self.abp_start(1)
+
 
 	def ai_one_ahead(self):
 		current_best_1 = ["A1",-100]
@@ -503,6 +522,9 @@ class Hex_Game:
 		self.current_player = "P1"
 		move_func = p1_move_func
 
+		#for x in range(6):
+		#	self.player_actions(self.random_move)
+
 		while self.winner_exists == False:
 			self.player_actions(move_func)
 		
@@ -519,25 +541,65 @@ class Hex_Game:
 		self.game(self.get_move, self.get_move)		
 
 	def simulation(self):
-		self.game(self.random_move, self.random_move)	
+		winners = {"P1": 0, "P2": 0}
+		for x in range(50):
+			winner = self.game(partial(self.abp_id,30), partial(self.abp_id,1))	
+			if winner == "P1":
+				winners["P1"] += 1
+			elif winner == "P2":
+				winners["P2"] += 1
+		print(winners)
 
+
+	def add_to_reachable_blank(self, most_recent_move, all_reachable):
+		#recursive function
+
+		all_reachable.add(most_recent_move)
+		most_recent_move_x = most_recent_move[0]
+		most_recent_move_y = most_recent_move[1]
+
+		for case in range(1,7):
+			if case == 1:
+				move_x, move_y = self.case_1(most_recent_move_x, most_recent_move_y)
+			elif case == 2:
+				move_x, move_y = self.case_2(most_recent_move_x, most_recent_move_y)
+			elif case == 3:
+				move_x, move_y = self.case_3(most_recent_move_x, most_recent_move_y)
+			elif case == 4:
+				move_x, move_y = self.case_4(most_recent_move_x, most_recent_move_y)
+			elif case == 5:
+				move_x, move_y = self.case_5(most_recent_move_x, most_recent_move_y)
+			elif case == 6:
+				move_x, move_y = self.case_6(most_recent_move_x, most_recent_move_y)
+
+			move = (ALPHABET[move_x], move_y) 
+			if move not in all_reachable and self.is_valid_move(move_x, move_y):
+				to_add = self.check_placement(move)
+				if to_add == True or move in self.move_options:
+					self.add_to_reachable_blank(move, all_reachable)
 	def get_segments(self):
 		played_moves = copy.deepcopy(self.played_moves)
 		#key is initial move of segment
 		segments = {}
+		segments_with_blanks = {}
 		for move in self.played_moves:
 			if move in played_moves:
 				all_reachable = copy.deepcopy(set())
+				all_reachable_blanks = copy.deepcopy(set())
 				self.who_placed_first_move_in_sequence = self.check_who_placed(move)
 				self.add_to_reachable(move, all_reachable)
+				self.add_to_reachable_blank(move, all_reachable_blanks)
 				for reachable_move in all_reachable:
 					played_moves.remove(reachable_move)
 
 				segments[move] = copy.deepcopy(all_reachable)
-		return segments
+				segments_with_blanks[move] = copy.deepcopy(all_reachable_blanks)
+		#print(segments_with_blanks)
+		return segments, segments_with_blanks 
 
-	def get_player_segment_lengths(self, segments):
+	def get_player_segment_lengths(self, segments, segments_with_blanks):
 		player_segments_lengths = {"P1": {}, "P2": {}}
+		full_player_lengths = {"P1": {}, "P2": {}}
 		for key in segments.keys():
 			player = self.check_who_placed(key)
 			if player == "P1":
@@ -546,6 +608,7 @@ class Hex_Game:
 					x_coords.append(value[0])
 				unique_x_coords = set(x_coords)
 				player_segments_lengths["P1"][key] = len(unique_x_coords)
+				full_player_lengths["P1"][key] = len(segments[key])
 				
 			elif player == "P2":
 				y_coords = []
@@ -553,21 +616,47 @@ class Hex_Game:
 					y_coords.append(value[1])
 				unique_y_coords = set(y_coords)
 				player_segments_lengths["P2"][key] = len(unique_y_coords)
-		return player_segments_lengths
+				full_player_lengths["P2"][key] = len(segments[key])
+		player_segments_lengths_blanks = {"P1": {}, "P2": {}}
+		#print(segments_with_blanks)
+		for key in segments_with_blanks.keys():
+			player = self.check_who_placed(key)
+			if player == "P1":
+				x_coords = []
+				for value in segments_with_blanks[key]:
+					x_coords.append(value[0])
+				unique_x_coords = set(x_coords)
+				player_segments_lengths_blanks["P1"][key] = len(unique_x_coords)
+				
+			elif player == "P2":
+				y_coords = []
+				for value in segments_with_blanks[key]:
+					y_coords.append(value[1])
+				unique_y_coords = set(y_coords)
+				player_segments_lengths_blanks["P2"][key] = len(unique_y_coords)
+		#print(player_segments_lengths_blanks)
+		return player_segments_lengths, full_player_lengths, player_segments_lengths_blanks
 		
 
-	def evaluate_lengths(self, player_segments_lengths):
+	def evaluate_lengths(self, player_segments_lengths, full_player_lengths, player_segments_lengths_blanks):
+		#print(full_player_lengths)
+		#print(player_segments_lengths)
+		#print(player_segments_lengths_blanks)
 		player_totals = {"P1":0, "P2":0}
 		for key in player_segments_lengths.keys():
-			for value in player_segments_lengths[key].values():
-				player_totals[key] += value * value
+			for value_1, value_2, value_3 in zip(player_segments_lengths[key].values(), player_segments_lengths_blanks[key].values(), full_player_lengths[key].values()):
+				if value_2 == self.board_size:
+					#value_3 * value_3 vs value_3 * math.sqrt(value_3) vs value_3 * value_3 * value_3
+					player_totals[key] += value_1 * value_1 + ((value_3 * value_3)/(self.board_size))
+				if value_1 == self.board_size:
+					player_totals[key] += math.inf
 		#print("Totals: ", player_totals)
 		return player_totals
 
 	def evaluate(self):
-		segments = self.get_segments()
-		player_segments_lengths  = self.get_player_segment_lengths(segments)
-		totals = self.evaluate_lengths(player_segments_lengths)
+		segments, segments_with_blanks = self.get_segments()
+		player_segments_lengths, full_player_lengths, player_segments_lengths_blanks = self.get_player_segment_lengths(segments, segments_with_blanks)
+		totals = self.evaluate_lengths(player_segments_lengths, full_player_lengths, player_segments_lengths_blanks)
 		return totals
 
 class Hex_Game_UI(Hex_Game):
@@ -594,7 +683,7 @@ class Hex_Game_UI(Hex_Game):
     			move = self.player_move_ui(id)
     			self.do_actions(move)
     			self.current_round += 0.5
-		if self.winner_exists:
+		elif self.winner_exists:
     			self._print_winner()
     			#self.canvas.destroy()
     			self.root.quit()
@@ -612,11 +701,15 @@ class Hex_Game_UI(Hex_Game):
     			self.current_round += 0.5
     			move = move_func()
     			print(move)
+    			if self.winner_exists:
+    				self._print_winner()
+    				self.root.quit()
+    				return self.current_player
     			str_move = str(move[0]) + str(move[1])
     			self.modify_hexagon(self.hexagons[str_move])
     			self.do_actions(move)
     			self.current_round += 0.5
-		if self.winner_exists:
+		elif self.winner_exists:
     			self._print_winner()
     			#self.canvas.destroy()
     			self.root.quit()
@@ -791,7 +884,9 @@ class Hex_Game_UI(Hex_Game):
 
 	def as_p1(self):
 		#self.ui_game(2, self.random_move, self.ai_three_ahead)	
-		self.ui_game(2, self.random_move, partial(self.abp_id, 1))	
+		self.ui_game(2, self.random_move, partial(self.abp_start, 8))
+		#self.ui_game(2, self.random_move, self.abp_by_size)
+			
 
 	def as_p2(self):
 		#self.ui_game(3, self.random_move, self.random_move)
@@ -814,7 +909,7 @@ if __name__ == "__main__":
 	#hex = Hex_Game(5)
 	#hex.game(hex.get_move, hex.ai_three_ahead)	
 	#hex.simulation()
-	hex = Hex_Game_UI(11)
+	hex = Hex_Game_UI(5)
 	hex.as_p1()
 	#hex.as_p2()
 	#hex.simulation()

@@ -849,10 +849,10 @@ class Hex_Game_UI(Hex_Game):
                 self.p1_wins = 0
                 self.p2_wins = 0
                 for round in range(rounds):
-                       #self.ui_game(4, self.random_move, p2_move_func=lambda: self.ai_move(depth=3))
-                       #self.ui_game(4, p1_move_func=lambda: self.ai_move(depth=3), p2_move_func=self.random_move)     
+                       self.ui_game(4, self.random_move, p2_move_func=lambda: self.ai_move(depth=2, ai_player="P2"))
+                       #self.ui_game(4, p1_move_func=lambda: self.ai_move(depth=3, ai_player="P1"), p2_move_func=self.random_move)     
                        # self.ui_game(4, self.random_move, self.random_move)
-                        print(f"Number of rounds: {rounds}")
+                print(f"Number of rounds: {rounds}")
                 print(f"Player 1 number of wins {self.p1_wins}")
                 print(f"Player 2 number of wins {self.p2_wins}")
                 self.reset_board()
@@ -864,9 +864,9 @@ class Hex_Game_UI(Hex_Game):
 
 
 if __name__ == "__main__":
-        hex = Hex_Game_UI(11)
-        #hex.simulation(10)
-        hex.as_p2()
+        hex = Hex_Game_UI(5)
+        hex.simulation(50)
+        #hex.as_p2()
          #hex = Hex_Game(
         #hex.play_game()
         #hex.reset_board()
